@@ -41,6 +41,23 @@ export function useStore() {
     ]);
   }, []);
 
+  const addBricks = useCallback((count: number) => {
+    const newBricks: Brick[] = [];
+    for (let i = 0; i < count; i++) {
+      newBricks.push({
+        id: nextId++,
+        position: [
+          Math.round(Math.random() * 6 - 3),
+          0.5,
+          Math.round(Math.random() * 6 - 3),
+        ],
+        rotation: [0, 0, 0],
+        color: randomColor(),
+      });
+    }
+    setBricks((prev) => [...prev, ...newBricks]);
+  }, []);
+
   const updateBrick = useCallback(
     (id: number, position: [number, number, number], rotation: [number, number, number]) => {
       setBricks((prev) =>
@@ -50,5 +67,5 @@ export function useStore() {
     []
   );
 
-  return { bricks, addBrick, updateBrick };
+  return { bricks, addBrick, addBricks, updateBrick };
 }
