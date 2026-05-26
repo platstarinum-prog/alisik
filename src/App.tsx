@@ -6,27 +6,28 @@ import * as THREE from 'three';
 const COLORS = ['#e63946','#457b9d','#2a9d8f','#e9c46a','#f4a261','#264653','#6d6875','#b5838d','#4c9f70','#7b2cbf'];
 let nextId = 1;
 
-type BrickData = { id: number; x: number; z: number; rot: number; color: string };
+type BrickData = { id: number; x: number; y: number; z: number; rot: number; color: string };
 
 function makeBrick(): BrickData {
   return {
     id: nextId++,
     x: Math.round(Math.random()*6-3),
+    y: 0.5,
     z: Math.round(Math.random()*6-3),
     rot: 0,
     color: COLORS[Math.floor(Math.random()*COLORS.length)]!,
   };
 }
 
-function Brick({ data, onPointerDown, onPointerUp }: {
+function Brick({ data, onDown, onUp }: {
   data: BrickData;
-  onPointerDown: (e: ThreeEvent<PointerEvent>, id: number) => void;
-  onPointerUp: (e: ThreeEvent<PointerEvent>, id: number) => void;
+  onDown: (e: ThreeEvent<PointerEvent>, id: number) => void;
+  onUp: (e: ThreeEvent<PointerEvent>, id: number) => void;
 }) {
   return (
-    <group position={[data.x, 0.5, data.z]} rotation={[0, data.rot, 0]}
-      onPointerDown={(e) => onPointerDown(e, data.id)}
-      onPointerUp={(e) => onPointerUp(e, data.id)}
+    <group position={[data.x, data.y, data.z]} rotation={[0, data.rot, 0]}
+      onPointerDown={(e) => onDown(e, data.id)}
+      onPointerUp={(e) => onUp(e, data.id)}
     >
       <mesh>
         <boxGeometry args={[2, 1, 4]} />
@@ -48,31 +49,37 @@ function Scene({ bricks, onMove, onSelect }: {
   onSelect: (id: number) => void;
 }) {
   const controlsRef = useRef<any>(null);
-  const draggingRef = useRef<number | null>(null);
-  const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -0.5);
+  const dragRef = useRef<{ id: number; y: number } | null>(null);
+  const plane = new THREE.Plane(new THREE.Vector3(0,1,0));
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
+  const bricksMap = useRef(new Map<number, BrickData>());
+  bricks.forEach(b => bricksMap.current.set(b.id, b));
+
   useFrame(({ camera, pointer }) => {
-    const id = draggingRef.current;
-    if (id === null) return;
+    const d = dragRef.current;
+    if (!d) return;
+    plane.set(new THREE.Vector3(0,1,0), -d.y);
     mouse.set(pointer.x, pointer.y);
     raycaster.setFromCamera(mouse, camera);
     const hit = new THREE.Vector3();
     if (raycaster.ray.intersectPlane(plane, hit)) {
-      onMove(id, Math.round(hit.x), Math.round(hit.z));
+      onMove(d.id, Math.round(hit.x), Math.round(hit.z));
     }
   });
 
   const handleDown = useCallback((e: ThreeEvent<PointerEvent>, id: number) => {
     e.stopPropagation();
-    draggingRef.current = id;
+    const b = bricksMap.current.get(id);
+    if (!b) return;
+    dragRef.current = { id, y: b.y };
     onSelect(id);
     if (controlsRef.current) controlsRef.current.enabled = false;
   }, [onSelect]);
 
-  const handleUp = useCallback((_e: ThreeEvent<PointerEvent>, _id: number) => {
-    draggingRef.current = null;
+  const handleUp = useCallback(() => {
+    dragRef.current = null;
     if (controlsRef.current) controlsRef.current.enabled = true;
   }, []);
 
@@ -86,7 +93,7 @@ function Scene({ bricks, onMove, onSelect }: {
         sectionSize={5} sectionThickness={1} sectionColor="#9a9ab8"
         fadeDistance={30} position={[0,-0.01,0]} />
       {bricks.map(b => (
-        <Brick key={b.id} data={b} onPointerDown={handleDown} onPointerUp={handleUp} />
+        <Brick key={b.id} data={b} onDown={handleDown} onUp={handleUp} />
       ))}
     </>
   );
@@ -98,11 +105,14 @@ export default function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'r' && selectedId !== null) {
-        setBricks(prev => prev.map(b =>
-          b.id === selectedId ? { ...b, rot: b.rot + Math.PI / 2 } : b
-        ));
-      }
+      if (selectedId === null) return;
+      setBricks(prev => prev.map(b => {
+        if (b.id !== selectedId) return b;
+        if (e.key === 'r') return { ...b, rot: b.rot + Math.PI / 2 };
+        if (e.key === 'q') return { ...b, y: Math.max(0.5, b.y - 0.5) };
+        if (e.key === 'e') return { ...b, y: b.y + 0.5 };
+        return b;
+      }));
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -122,12 +132,19 @@ export default function App() {
         <Scene bricks={bricks} onMove={handleMove} onSelect={setSelectedId} />
       </Canvas>
       <button onClick={handleAdd} style={{
-        position:'absolute', bottom:80, left:'50%', transform:'translateX(-50%)',
+        position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)',
         padding:'12px 28px', fontSize:18, fontWeight:600,
         background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'#fff',
         border:'none', borderRadius:12, cursor:'pointer',
         boxShadow:'0 4px 24px rgba(124,58,237,0.4)', zIndex:10
       }}>+ Add Brick</button>
+      <div style={{
+        position:'absolute', bottom:90, left:'50%', transform:'translateX(-50%)',
+        color:'#9a9ab8', fontSize:12, fontFamily:'monospace', zIndex:10,
+        textAlign:'center', pointerEvents:'none', opacity:0.7,
+      }}>
+        Клик — drag • R — поворот • Q/E — вверх/вниз
+      </div>
     </div>
   );
 }
