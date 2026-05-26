@@ -65,9 +65,9 @@ function Scene({bricks,onMove,onSelect,theme,plateColor}:{bricks:BrickData[];onM
 
   return(<>
     <OrbitControls ref={ctrl} makeDefault enableDamping={false} />
-    <ambientLight intensity={0.4} color={theme.ambient} />
-    <directionalLight position={[5,10,5]} intensity={0.8} color={theme.light1} />
-    <directionalLight position={[-5,5,-5]} intensity={0.3} color={theme.light2} />
+    <ambientLight intensity={theme.ambientI ?? 0.4} color={theme.ambient} />
+    <directionalLight position={[5,10,5]} intensity={theme.light1I ?? 0.8} color={theme.light1} />
+    <directionalLight position={[-5,5,-5]} intensity={theme.light2I ?? 0.3} color={theme.light2} />
     <Baseplate color={plateColor} />
     {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} onUp={hu} />)}
   </>);
@@ -154,11 +154,11 @@ export default function App(){
 
   const theme=dark?{
     bg:'#0c0a1a',uiBg:'rgba(16,12,30,0.94)',txt:'#e4ddf5',muted:'#8a7ea8',
-    border:'rgba(168,85,247,0.15)',ambient:'#332266',light1:'#8855cc',light2:'#443377',
+    border:'rgba(168,85,247,0.15)',ambient:'#ffffff',ambientI:0.7,light1:'#ffffff',light1I:1.2,light2:'#c8d0ff',light2I:0.5,
     accent:'#7c3aed',accent2:'#a855f7',btnBg:'rgba(255,255,255,0.10)',btnTxt:'#e4ddf5',
   }:{
     bg:'#f3eefb',uiBg:'rgba(248,244,255,0.94)',txt:'#1a1430',muted:'#7a6e98',
-    border:'rgba(124,58,237,0.12)',ambient:'#eeddff',light1:'#b080ff',light2:'#d4b0ff',
+    border:'rgba(124,58,237,0.12)',ambient:'#ffffff',ambientI:0.5,light1:'#ffffff',light1I:1.0,light2:'#d0d8ff',light2I:0.4,
     accent:'#6d28d9',accent2:'#9333ea',btnBg:'rgba(109,40,217,0.08)',btnTxt:'#1a1430',
   };
 
