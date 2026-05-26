@@ -9,44 +9,52 @@ import LegoBrick from './LegoBrick';
 type TransformMode = 'translate' | 'rotate';
 
 export default function App() {
-  const { bricks, addBricks, updateBrick } = useStore();
+  const { bricks, addBrick, updateBrick } = useStore();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mode, setMode] = useState<TransformMode>('translate');
   const controlsRef = useRef<OrbitControlsType>(null);
   const brickGroupRef = useRef<THREE.Group>(null);
+  const activeIdRef = useRef<number | null>(null);
 
-  const saveActiveTransform = useCallback(() => {
-    if (brickGroupRef.current && activeId !== null) {
-      const p = brickGroupRef.current.position;
-      const r = brickGroupRef.current.rotation;
-      updateBrick(activeId, [p.x, p.y, p.z], [r.x, r.y, r.z]);
+  activeIdRef.current = activeId;
+
+  const syncTransform = useCallback(() => {
+    const g = brickGroupRef.current;
+    const id = activeIdRef.current;
+    if (g && id !== null) {
+      const p = g.position;
+      const r = g.rotation;
+      updateBrick(id, [
+        Math.round(p.x * 2) / 2,
+        Math.round(p.y * 2) / 2,
+        Math.round(p.z * 2) / 2,
+      ], [r.x, r.y, r.z]);
     }
-  }, [activeId, updateBrick]);
+  }, [updateBrick]);
 
   const selectBrick = useCallback((id: number | null) => {
-    saveActiveTransform();
+    syncTransform();
     setActiveId(id);
     if (controlsRef.current) controlsRef.current.enabled = id === null;
-  }, [saveActiveTransform]);
+  }, [syncTransform]);
 
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, id: number) => {
     e.stopPropagation();
-    saveActiveTransform();
+    syncTransform();
     if (controlsRef.current) controlsRef.current.enabled = false;
     setActiveId(id);
-  }, [saveActiveTransform]);
+  }, [syncTransform]);
 
-  const handlePointerUp = useCallback(() => {
-    saveActiveTransform();
-    if (controlsRef.current) controlsRef.current.enabled = true;
-  }, [saveActiveTransform]);
+  const handleTransformChange = useCallback(() => {
+    syncTransform();
+  }, [syncTransform]);
 
-  const handleAddBricks = useCallback(() => {
-    saveActiveTransform();
+  const handleAddBrick = useCallback(() => {
+    syncTransform();
     setActiveId(null);
-    addBricks(3);
+    addBrick();
     if (controlsRef.current) controlsRef.current.enabled = true;
-  }, [saveActiveTransform, addBricks]);
+  }, [syncTransform, addBrick]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
@@ -78,7 +86,7 @@ export default function App() {
                 <TransformControls
                   mode={mode}
                   snap={mode === 'translate' ? 0.5 : Math.PI / 4}
-                  onPointerUp={handlePointerUp}
+                  onChange={handleTransformChange}
                 >
                   <group ref={brickGroupRef}>
                     <LegoBrick brick={b} />
@@ -121,7 +129,7 @@ export default function App() {
       </div>
 
       <button
-        onClick={handleAddBricks}
+        onClick={handleAddBrick}
         style={{
           position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
           padding: '12px 28px', fontSize: 18, fontWeight: 600,
@@ -131,7 +139,7 @@ export default function App() {
           zIndex: 10,
         }}
       >
-        + Add 3 Bricks
+        + Add Brick
       </button>
 
       <div style={{
