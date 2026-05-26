@@ -18,10 +18,10 @@ function studs(type:BrickType){const{w,d}=BRICK_TYPES[type];const p:[number,numb
 type BrickData={id:number;x:number;y:number;z:number;rot:number;color:string;type:BrickType};
 const mkBrick=(t:BrickType,c:string):BrickData=>({id:nextId++,x:0,y:0.5,z:0,rot:0,color:c,type:t});
 
-function Brick({d,onDown,onUp}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id:number)=>void;onUp:(e:ThreeEvent<PointerEvent>,id:number)=>void}){
+function Brick({d,onDown}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id:number)=>void}){
   const{w,d:depth}=BRICK_TYPES[d.type];
   return(
-    <group position={[d.x,d.y,d.z]} rotation={[0,d.rot,0]} onPointerDown={e=>onDown(e,d.id)} onPointerUp={e=>onUp(e,d.id)}>
+    <group position={[d.x,d.y,d.z]} rotation={[0,d.rot,0]} onPointerDown={e=>onDown(e,d.id)}>
       <mesh><boxGeometry args={[w,1,depth]} /><meshStandardMaterial color={d.color} roughness={0.25} metalness={0.15} /></mesh>
       {studs(d.type).map((p,i)=>(
         <mesh key={i} position={p}><cylinderGeometry args={[0.25,0.25,0.2,8]} /><meshStandardMaterial color={d.color} roughness={0.2} metalness={0.15} /></mesh>
@@ -45,13 +45,27 @@ function Baseplate({color}:{color:string}){
   </>);
 }
 
-function Scene({bricks,onMove,onSelect,theme,plateColor}:{bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;theme:any;plateColor:string}){
+function Scene({bricks,onMove,onSelect,onCommitDrag,theme,plateColor}:{bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;onCommitDrag:(bricks:BrickData[])=>void;theme:any;plateColor:string}){
   const ctrl=useRef<any>(null);
   const dr=useRef<{id:number;y:number}|null>(null);
   const pl=new THREE.Plane(new THREE.Vector3(0,1,0));
   const rc=new THREE.Raycaster(),ms=new THREE.Vector2();
   const mp=useRef(new Map<number,BrickData>());
   bricks.forEach(b=>mp.current.set(b.id,b));
+  const bricksRef=useRef(bricks);
+  bricksRef.current=bricks;
+  const onCommitRef=useRef(onCommitDrag);
+  onCommitRef.current=onCommitDrag;
+
+  useEffect(()=>{
+    const up=()=>{
+      if(dr.current) onCommitRef.current(bricksRef.current);
+      dr.current=null;
+      if(ctrl.current) ctrl.current.enabled=true;
+    };
+    window.addEventListener('pointerup',up);
+    return()=>window.removeEventListener('pointerup',up);
+  },[]);
 
   useFrame(({camera:c,pointer:p})=>{
     const d=dr.current;if(!d)return;
@@ -61,7 +75,6 @@ function Scene({bricks,onMove,onSelect,theme,plateColor}:{bricks:BrickData[];onM
   });
 
   const hd=useCallback((e:ThreeEvent<PointerEvent>,id:number)=>{e.stopPropagation();const b=mp.current.get(id);if(!b)return;dr.current={id,y:b.y};onSelect(id);if(ctrl.current)ctrl.current.enabled=false;},[onSelect]);
-  const hu=useCallback(()=>{dr.current=null;if(ctrl.current)ctrl.current.enabled=true;},[]);
 
   return(<>
     <OrbitControls ref={ctrl} makeDefault enableDamping={false} />
@@ -69,7 +82,7 @@ function Scene({bricks,onMove,onSelect,theme,plateColor}:{bricks:BrickData[];onM
     <directionalLight position={[5,10,5]} intensity={theme.light1I ?? 0.8} color={theme.light1} />
     <directionalLight position={[-5,5,-5]} intensity={theme.light2I ?? 0.3} color={theme.light2} />
     <Baseplate color={plateColor} />
-    {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} onUp={hu} />)}
+    {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} />)}
   </>);
 }
 
@@ -152,6 +165,8 @@ export default function App(){
   const hUp=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:b.y+0.5}:b));},[sel,setBricksAndCommit]);
   const hDn=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:Math.max(0.5,b.y-0.5)}:b));},[sel,setBricksAndCommit]);
 
+  const onDragEnd=useCallback((b:BrickData[])=>{commit(b);},[commit]);
+
   const theme=dark?{
     bg:'#0c0a1a',uiBg:'rgba(16,12,30,0.94)',txt:'#e4ddf5',muted:'#8a7ea8',
     border:'rgba(168,85,247,0.15)',ambient:'#ffffff',ambientI:0.7,light1:'#ffffff',light1I:1.2,light2:'#c8d0ff',light2I:0.5,
@@ -168,7 +183,7 @@ export default function App(){
   return(
     <div style={{width:'100vw',height:'100vh',position:'relative',overflow:'hidden',background:theme.bg}}>
       <Canvas camera={{position:[10,8,10],fov:50}} style={{touchAction:'none',background:theme.bg}}>
-        <Scene bricks={bricks} onMove={hm} onSelect={setSel} theme={theme} plateColor={plateColor} />
+        <Scene bricks={bricks} onMove={hm} onSelect={setSel} onCommitDrag={onDragEnd} theme={theme} plateColor={plateColor} />
       </Canvas>
 
       {/* верхняя панель */}
