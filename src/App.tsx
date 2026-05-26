@@ -242,7 +242,7 @@ export default function App(){
         <Scene bricks={bricks} onMove={hm} onSelect={setSel} onCommitDrag={onDragEnd} sel={sel} theme={theme} plateColor={plateColor} />
       </Canvas>
 
-      <div style={{position:'absolute',top:6,left:6,right:6,display:'flex',gap:4,zIndex:10,flexWrap:'wrap',alignItems:'center'}}>
+      <div style={{position:'absolute',top:'calc(6px + env(safe-area-inset-top, 0px))',left:6,right:6,display:'flex',gap:4,zIndex:10,flexWrap:'wrap',alignItems:'center'}}>
         <button onClick={undo} style={{...bBtn,fontSize:14}} disabled={!canUndo}>↶</button>
         <button onClick={redo} style={{...bBtn,fontSize:14}} disabled={!canRedo}>↷</button>
         <div style={{width:1,height:24,background:theme.border}} />
@@ -268,7 +268,7 @@ export default function App(){
         </div>
       )}
 
-      <div style={{position:'absolute',bottom:10,left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:6,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'6px 10px',border:`1px solid ${theme.border}`,alignItems:'center'}}>
+      <div style={{position:'absolute',bottom:'calc(10px + env(safe-area-inset-bottom, 0px))',left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:6,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'6px 10px',border:`1px solid ${theme.border}`,alignItems:'center'}}>
         <button onClick={hDn} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▼</button>
         <button onClick={hUp} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▲</button>
         <button onClick={hRot} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>↻</button>
@@ -278,7 +278,7 @@ export default function App(){
         <button onClick={()=>setShowMenu(p=>!p)} style={{...bBtn,background:grd,color:'#fff',fontSize:20,width:48,height:48,borderRadius:14}}>+</button>
       </div>
 
-      <div style={{position:'absolute',bottom:72,left:'50%',transform:'translateX(-50%)',color:theme.muted,fontSize:9,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.5}}>
+      <div style={{position:'absolute',bottom:'calc(72px + env(safe-area-inset-bottom, 0px))',left:'50%',transform:'translateX(-50%)',color:theme.muted,fontSize:9,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.5}}>
         Drag to move • R/↻ rotate • Q/E height • Del • Ctrl+Z/Y
       </div>
 
