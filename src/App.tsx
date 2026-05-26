@@ -205,6 +205,7 @@ export default function App(){
   },[newType,newColor,setBricksAndCommit]);
   const hUp=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:b.y+0.5}:b));},[sel,setBricksAndCommit]);
   const hDn=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:Math.max(0.5,b.y-0.5)}:b));},[sel,setBricksAndCommit]);
+  const hRot=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,rot:b.rot+Math.PI/2}:b));},[sel,setBricksAndCommit]);
   const hDel=useCallback(()=>{
     if(sel===null)return;
     setBricksAndCommit(p=>p.filter(b=>b.id!==sel));
@@ -270,6 +271,7 @@ export default function App(){
       <div style={{position:'absolute',bottom:10,left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:6,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'6px 10px',border:`1px solid ${theme.border}`,alignItems:'center'}}>
         <button onClick={hDn} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▼</button>
         <button onClick={hUp} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▲</button>
+        <button onClick={hRot} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>↻</button>
         <div style={{width:1,height:26,background:theme.border}} />
         <button onClick={hDel} style={{...bBtn,width:40,height:40,fontSize:16,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>✕</button>
         <div style={{width:1,height:26,background:theme.border}} />
@@ -277,7 +279,7 @@ export default function App(){
       </div>
 
       <div style={{position:'absolute',bottom:72,left:'50%',transform:'translateX(-50%)',color:theme.muted,fontSize:9,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.5}}>
-        Drag to move • R rotate • Q/E height • Del • Ctrl+Z/Y
+        Drag to move • R/↻ rotate • Q/E height • Del • Ctrl+Z/Y
       </div>
 
       {showMenu&&(
