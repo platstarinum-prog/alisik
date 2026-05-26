@@ -1,55 +1,71 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
-import { useStore } from './store';
+import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
+import { useStore, type Brick } from './store';
 import LegoBrick from './LegoBrick';
+
+function Scene({
+  bricks,
+  onDragStart,
+  onDragEnd,
+}: {
+  bricks: Brick[];
+  onDragStart: () => void;
+  onDragEnd: (id: number, x: number, z: number) => void;
+}) {
+  const controlsRef = useRef<OrbitControlsType>(null);
+
+  return (
+    <>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 10, 5]} intensity={1} />
+      <directionalLight position={[-5, 5, -5]} intensity={0.3} />
+      <Grid
+        args={[20, 20]}
+        cellSize={1}
+        cellThickness={0.5}
+        cellColor="#6e6e8a"
+        sectionSize={5}
+        sectionThickness={1}
+        sectionColor="#9a9ab8"
+        fadeDistance={30}
+        position={[0, -0.01, 0]}
+      />
+      <OrbitControls ref={controlsRef} makeDefault />
+      {bricks.map((b) => (
+        <LegoBrick
+          key={b.id}
+          brick={b}
+          onDragStart={() => {
+            if (controlsRef.current) controlsRef.current.enabled = false;
+            onDragStart();
+          }}
+          onDragEnd={(id, x, z) => {
+            if (controlsRef.current) controlsRef.current.enabled = true;
+            onDragEnd(id, x, z);
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 export default function App() {
   const { bricks, addBrick, updatePosition } = useStore();
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleDragStart = useCallback(() => setIsDragging(true), []);
-  const handleDragEnd = useCallback(
-    (id: number, x: number, z: number) => {
-      setIsDragging(false);
-      updatePosition(id, x, z);
-    },
-    [updatePosition]
-  );
+  const [, forceUpdate] = useState(0);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <Canvas
-        camera={{ position: [8, 6, 8], fov: 50 }}
-      >
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 10, 5]} intensity={1} />
-        <directionalLight position={[-5, 5, -5]} intensity={0.3} />
-        <Grid
-          args={[20, 20]}
-          cellSize={1}
-          cellThickness={0.5}
-          cellColor="#6e6e8a"
-          sectionSize={5}
-          sectionThickness={1}
-          sectionColor="#9a9ab8"
-          fadeDistance={30}
-          position={[0, -0.01, 0]}
+      <Canvas camera={{ position: [8, 6, 8], fov: 50 }}>
+        <Scene
+          bricks={bricks}
+          onDragStart={() => {}}
+          onDragEnd={(id, x, z) => {
+            updatePosition(id, x, z);
+            forceUpdate((c) => c + 1);
+          }}
         />
-        <OrbitControls
-          makeDefault
-          enablePan={!isDragging}
-          enableZoom={!isDragging}
-          enableRotate={!isDragging}
-        />
-        {bricks.map((b) => (
-          <LegoBrick
-            key={b.id}
-            brick={b}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          />
-        ))}
       </Canvas>
 
       <button
@@ -69,6 +85,8 @@ export default function App() {
           cursor: 'pointer',
           boxShadow: '0 4px 24px rgba(124,58,237,0.4)',
           zIndex: 10,
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
         }}
       >
         + Add Brick
@@ -88,7 +106,7 @@ export default function App() {
           pointerEvents: 'none',
         }}
       >
-        Drag bricks to build • Click "+ Add Brick" for more
+        ЛКМ на кубике — перетащить • ПКМ/колёсико — вращать/зум
       </div>
     </div>
   );
