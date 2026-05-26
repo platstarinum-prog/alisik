@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 export interface Brick {
   id: number;
   position: [number, number, number];
+  rotation: [number, number, number];
   color: string;
 }
 
@@ -20,7 +21,7 @@ function randomColor() {
 
 export function useStore() {
   const [bricks, setBricks] = useState<Brick[]>([
-    { id: 0, position: [0, 0.5, 0], color: randomColor() },
+    { id: 0, position: [0, 0.5, 0], rotation: [0, 0, 0], color: randomColor() },
   ]);
 
   const addBrick = useCallback(() => {
@@ -34,18 +35,20 @@ export function useStore() {
           0.5,
           Math.round(Math.random() * 6 - 3),
         ],
+        rotation: [0, 0, 0],
         color: randomColor(),
       },
     ]);
   }, []);
 
-  const updatePosition = useCallback((id: number, x: number, z: number) => {
-    setBricks((prev) =>
-      prev.map((b) =>
-        b.id === id ? { ...b, position: [x, 0.5, z] } : b
-      )
-    );
-  }, []);
+  const updateBrick = useCallback(
+    (id: number, position: [number, number, number], rotation: [number, number, number]) => {
+      setBricks((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, position, rotation } : b))
+      );
+    },
+    []
+  );
 
-  return { bricks, addBrick, updatePosition };
+  return { bricks, addBrick, updateBrick };
 }
