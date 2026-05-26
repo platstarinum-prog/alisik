@@ -43,7 +43,7 @@ function Brick({d,onDown,sel}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id
       {sel&&(
         <lineSegments>
           <edgesGeometry args={[new THREE.BoxGeometry(w,1,depth)]} />
-          <lineBasicMaterial color="#a855f7" />
+          <lineBasicMaterial color="#a855f7" depthTest={false} />
         </lineSegments>
       )}
     </group>
