@@ -24,29 +24,32 @@ export default function App() {
     if (g && id !== null) {
       const p = g.position;
       const r = g.rotation;
-      updateBrick(id, [
-        Math.round(p.x * 2) / 2,
-        Math.round(p.y * 2) / 2,
-        Math.round(p.z * 2) / 2,
-      ], [r.x, r.y, r.z]);
+      updateBrick(id, [p.x, p.y, p.z], [r.x, r.y, r.z]);
     }
   }, [updateBrick]);
 
-  const selectBrick = useCallback((id: number | null) => {
-    syncTransform();
-    setActiveId(id);
-    if (controlsRef.current) controlsRef.current.enabled = id === null;
-  }, [syncTransform]);
+  const selectBrick = useCallback(
+    (id: number | null) => {
+      syncTransform();
+      setActiveId(id);
+      if (controlsRef.current) controlsRef.current.enabled = id === null;
+    },
+    [syncTransform]
+  );
 
-  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, id: number) => {
-    e.stopPropagation();
-    syncTransform();
-    if (controlsRef.current) controlsRef.current.enabled = false;
-    setActiveId(id);
-  }, [syncTransform]);
+  const handlePointerDown = useCallback(
+    (e: ThreeEvent<PointerEvent>, id: number) => {
+      e.stopPropagation();
+      syncTransform();
+      if (controlsRef.current) controlsRef.current.enabled = false;
+      setActiveId(id);
+    },
+    [syncTransform]
+  );
 
-  const handleTransformChange = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     syncTransform();
+    if (controlsRef.current) controlsRef.current.enabled = true;
   }, [syncTransform]);
 
   const handleAddBrick = useCallback(() => {
@@ -86,7 +89,7 @@ export default function App() {
                 <TransformControls
                   mode={mode}
                   snap={mode === 'translate' ? 0.5 : Math.PI / 4}
-                  onChange={handleTransformChange}
+                  onPointerUp={handlePointerUp}
                 >
                   <group ref={brickGroupRef}>
                     <LegoBrick brick={b} />
@@ -103,22 +106,38 @@ export default function App() {
         })}
       </Canvas>
 
-      <div style={{
-        position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 8, zIndex: 10,
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: 8,
+          zIndex: 10,
+        }}
+      >
         {(['translate', 'rotate'] as const).map((m) => (
           <button
             key={m}
-            onClick={() => setMode(m)}
+            onClick={() => {
+              syncTransform();
+              setMode(m);
+            }}
             style={{
-              padding: '8px 16px', fontSize: 14, fontWeight: 600, border: 'none',
-              borderRadius: 8, cursor: 'pointer',
-              background: mode === m
-                ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
-                : 'rgba(255,255,255,0.1)',
+              padding: '8px 16px',
+              fontSize: 14,
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              background:
+                mode === m
+                  ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
+                  : 'rgba(255,255,255,0.1)',
               color: '#fff',
-              boxShadow: mode === m ? '0 2px 12px rgba(124,58,237,0.4)' : 'none',
+              boxShadow:
+                mode === m ? '0 2px 12px rgba(124,58,237,0.4)' : 'none',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
             }}
@@ -131,10 +150,18 @@ export default function App() {
       <button
         onClick={handleAddBrick}
         style={{
-          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          padding: '12px 28px', fontSize: 18, fontWeight: 600,
+          position: 'absolute',
+          bottom: 80,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '12px 28px',
+          fontSize: 18,
+          fontWeight: 600,
           background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-          color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 12,
+          cursor: 'pointer',
           boxShadow: '0 4px 24px rgba(124,58,237,0.4)',
           zIndex: 10,
         }}
@@ -142,12 +169,21 @@ export default function App() {
         + Add Brick
       </button>
 
-      <div style={{
-        position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-        color: '#9a9ab8', fontSize: 13, fontFamily: 'monospace',
-        zIndex: 10, textAlign: 'center', pointerEvents: 'none',
-        opacity: 0.8,
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          color: '#9a9ab8',
+          fontSize: 13,
+          fontFamily: 'monospace',
+          zIndex: 10,
+          textAlign: 'center',
+          pointerEvents: 'none',
+          opacity: 0.8,
+        }}
+      >
         Клик на кубик — выбрать • Move / Rotate — режим • Свободное место — снять выделение
       </div>
     </div>
