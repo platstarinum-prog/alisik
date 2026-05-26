@@ -46,7 +46,7 @@ function Scene({bricks,onMove,onSelect,dark}:{bricks:BrickData[];onMove:(id:numb
     const d=dr.current; if(!d) return;
     pl.set(new THREE.Vector3(0,1,0),-d.y); ms.set(p.x,p.y);
     rc.setFromCamera(ms,c); const h=new THREE.Vector3();
-    if(rc.ray.intersectPlane(pl,h)) onMove(d.id,Math.round(h.x),Math.round(h.z));
+    if(rc.ray.intersectPlane(pl,h)) onMove(d.id,Math.round(h.x*2)/2,Math.round(h.z*2)/2);
   });
 
   const hd=useCallback((e:ThreeEvent<PointerEvent>,id:number)=>{e.stopPropagation();const b=mp.current.get(id);if(!b)return;dr.current={id,y:b.y};onSelect(id);if(ctrl.current)ctrl.current.enabled=false;},[onSelect]);
