@@ -13,19 +13,41 @@ const BRICK_TYPES = {
 } as const;
 type BrickType=keyof typeof BRICK_TYPES;
 
-function studs(type:BrickType){const{w,d}=BRICK_TYPES[type];const p:[number,number,number][]=[];const xs=w===1?0:-0.5,zs=-(d/2)+0.5;for(let x=xs;x<w/2;x+=1)for(let z=zs;z<d/2;z+=1)p.push([x,0.6,z]);return p;}
+function studs(type:BrickType){
+  const{w,d}=BRICK_TYPES[type];
+  const p:[number,number,number][]=[];
+  const xs=w===1?0:-0.5,zs=-(d/2)+0.5;
+  for(let x=xs;x<w/2;x+=1)
+    for(let z=zs;z<d/2;z+=1)
+      p.push([x,0.6,z]);
+  return p;
+}
 
 type BrickData={id:number;x:number;y:number;z:number;rot:number;color:string;type:BrickType};
 const mkBrick=(t:BrickType,c:string):BrickData=>({id:nextId++,x:0,y:0.5,z:0,rot:0,color:c,type:t});
 
-function Brick({d,onDown}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id:number)=>void}){
+function Brick({d,onDown,sel}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id:number)=>void;sel:boolean}){
   const{w,d:depth}=BRICK_TYPES[d.type];
   return(
     <group position={[d.x,d.y,d.z]} rotation={[0,d.rot,0]} onPointerDown={e=>onDown(e,d.id)}>
-      <mesh><boxGeometry args={[w,1,depth]} /><meshStandardMaterial color={d.color} roughness={0.25} metalness={0.15} /></mesh>
+      <mesh>
+        <boxGeometry args={[w,1,depth]} />
+        <meshStandardMaterial color={d.color} roughness={0.25} metalness={0.15}
+          emissive={sel?'#a855f7':'#000000'} emissiveIntensity={sel?0.35:0} />
+      </mesh>
       {studs(d.type).map((p,i)=>(
-        <mesh key={i} position={p}><cylinderGeometry args={[0.25,0.25,0.2,8]} /><meshStandardMaterial color={d.color} roughness={0.2} metalness={0.15} /></mesh>
+        <mesh key={i} position={p}>
+          <cylinderGeometry args={[0.25,0.25,0.2,8]} />
+          <meshStandardMaterial color={d.color} roughness={0.2} metalness={0.15}
+            emissive={sel?'#a855f7':'#000000'} emissiveIntensity={sel?0.25:0} />
+        </mesh>
       ))}
+      {sel&&(
+        <mesh position={[0,0.5,0]}>
+          <boxGeometry args={[w+0.06,1.06,depth+0.06]} />
+          <meshBasicMaterial color="#a855f7" transparent opacity={0.15} depthWrite={false} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -45,11 +67,15 @@ function Baseplate({color}:{color:string}){
   </>);
 }
 
-function Scene({bricks,onMove,onSelect,onCommitDrag,theme,plateColor}:{bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;onCommitDrag:(bricks:BrickData[])=>void;theme:any;plateColor:string}){
+function Scene({bricks,onMove,onSelect,onCommitDrag,sel,theme,plateColor}:{
+  bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;
+  onCommitDrag:(b:BrickData[])=>void;sel:number|null;theme:any;plateColor:string
+}){
   const ctrl=useRef<any>(null);
   const dr=useRef<{id:number;y:number}|null>(null);
-  const pl=new THREE.Plane(new THREE.Vector3(0,1,0));
-  const rc=new THREE.Raycaster(),ms=new THREE.Vector2();
+  const plRef=useRef(new THREE.Plane(new THREE.Vector3(0,1,0)));
+  const rcRef=useRef(new THREE.Raycaster());
+  const ms=new THREE.Vector2();
   const mp=useRef(new Map<number,BrickData>());
   bricks.forEach(b=>mp.current.set(b.id,b));
   const bricksRef=useRef(bricks);
@@ -69,20 +95,29 @@ function Scene({bricks,onMove,onSelect,onCommitDrag,theme,plateColor}:{bricks:Br
 
   useFrame(({camera:c,pointer:p})=>{
     const d=dr.current;if(!d)return;
-    pl.set(new THREE.Vector3(0,1,0),-d.y);ms.set(p.x,p.y);
-    rc.setFromCamera(ms,c);const h=new THREE.Vector3();
-    if(rc.ray.intersectPlane(pl,h))onMove(d.id,Math.round(h.x*2)/2,Math.round(h.z*2)/2);
+    plRef.current.set(new THREE.Vector3(0,1,0),-d.y);
+    ms.set(p.x,p.y);
+    rcRef.current.setFromCamera(ms,c);
+    const h=new THREE.Vector3();
+    if(rcRef.current.ray.intersectPlane(plRef.current,h))
+      onMove(d.id,Math.round(h.x*2)/2,Math.round(h.z*2)/2);
   });
 
-  const hd=useCallback((e:ThreeEvent<PointerEvent>,id:number)=>{e.stopPropagation();const b=mp.current.get(id);if(!b)return;dr.current={id,y:b.y};onSelect(id);if(ctrl.current)ctrl.current.enabled=false;},[onSelect]);
+  const hd=useCallback((e:ThreeEvent<PointerEvent>,id:number)=>{
+    e.stopPropagation();
+    const b=mp.current.get(id);if(!b)return;
+    dr.current={id,y:b.y};
+    onSelect(id);
+    if(ctrl.current) ctrl.current.enabled=false;
+  },[onSelect]);
 
   return(<>
     <OrbitControls ref={ctrl} makeDefault enableDamping={false} />
-    <ambientLight intensity={theme.ambientI ?? 0.4} color={theme.ambient} />
-    <directionalLight position={[5,10,5]} intensity={theme.light1I ?? 0.8} color={theme.light1} />
-    <directionalLight position={[-5,5,-5]} intensity={theme.light2I ?? 0.3} color={theme.light2} />
+    <ambientLight intensity={theme.ambientI??0.4} color={theme.ambient} />
+    <directionalLight position={[5,10,5]} intensity={theme.light1I??0.8} color={theme.light1} />
+    <directionalLight position={[-5,5,-5]} intensity={theme.light2I??0.3} color={theme.light2} />
     <Baseplate color={plateColor} />
-    {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} />)}
+    {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} sel={b.id===sel} />)}
   </>);
 }
 
@@ -100,6 +135,7 @@ export default function App(){
   const[loadList,setLoadList]=useState(false);
   const[dark,setDark]=useState(true);
   const[plateColor,setPlateColor]=useState('#4a9e5c');
+  const[histVer,setHistVer]=useState(0);
   const historyRef=useRef<BrickData[][]>([]);
   const historyIdx=useRef(-1);
 
@@ -108,24 +144,27 @@ export default function App(){
     historyRef.current.push(b.map(x=>({...x})));
     if(historyRef.current.length>100)historyRef.current.shift();
     historyIdx.current=historyRef.current.length-1;
+    setHistVer(v=>v+1);
   },[]);
 
   const undo=useCallback(()=>{
     if(historyIdx.current<=0)return;
     historyIdx.current--;
     setBricks(historyRef.current[historyIdx.current]!.map(x=>({...x})));
+    setHistVer(v=>v+1);
   },[]);
 
   const redo=useCallback(()=>{
     if(historyIdx.current>=historyRef.current.length-1)return;
     historyIdx.current++;
     setBricks(historyRef.current[historyIdx.current]!.map(x=>({...x})));
+    setHistVer(v=>v+1);
   },[]);
 
-  const setBricksAndCommit=useCallback((fn:(p:BrickData[])=>BrickData[],commitNow:boolean=true)=>{
+  const setBricksAndCommit=useCallback((fn:(p:BrickData[])=>BrickData[],doCommit:boolean=true)=>{
     setBricks(p=>{
       const r=fn(p);
-      if(commitNow)commit(r);
+      if(doCommit)commit(r);
       return r;
     });
   },[commit]);
@@ -161,9 +200,23 @@ export default function App(){
   },[sel,undo,redo,setBricksAndCommit]);
 
   const hm=useCallback((id:number,x:number,z:number)=>setBricks(p=>p.map(b=>b.id===id?{...b,x,z}:b)),[]);
-  const ha=useCallback(()=>{setBricksAndCommit(p=>[...p,mkBrick(newType,newColor)]);setShowMenu(false);},[newType,newColor,setBricksAndCommit]);
+  const ha=useCallback(()=>{
+    const off=(Math.random()-0.5)*4;
+    setBricksAndCommit(p=>[...p,{...mkBrick(newType,newColor),x:off,z:off}]);
+    setShowMenu(false);
+  },[newType,newColor,setBricksAndCommit]);
   const hUp=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:b.y+0.5}:b));},[sel,setBricksAndCommit]);
   const hDn=useCallback(()=>{if(sel===null)return;setBricksAndCommit(p=>p.map(b=>b.id===sel?{...b,y:Math.max(0.5,b.y-0.5)}:b));},[sel,setBricksAndCommit]);
+  const hDel=useCallback(()=>{
+    if(sel===null)return;
+    setBricksAndCommit(p=>p.filter(b=>b.id!==sel));
+    setSel(null);
+  },[sel,setBricksAndCommit]);
+  const hClear=useCallback(()=>{
+    commit(bricks);
+    setBricks([]);
+    setSel(null);
+  },[commit,bricks]);
 
   const onDragEnd=useCallback((b:BrickData[])=>{commit(b);},[commit]);
 
@@ -177,24 +230,28 @@ export default function App(){
     accent:'#6d28d9',accent2:'#9333ea',btnBg:'rgba(109,40,217,0.08)',btnTxt:'#1a1430',
   };
 
+  const canUndo=historyIdx.current>0;
+  const canRedo=historyIdx.current<historyRef.current.length-1;
+  /**/histVer;
+
   const grd=`linear-gradient(135deg,${theme.accent},${theme.accent2})`;
   const bBtn:any={padding:'9px 10px',fontSize:13,fontWeight:600,border:'none',borderRadius:10,cursor:'pointer',color:theme.btnTxt,background:theme.btnBg,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'manipulation',lineHeight:1};
 
   return(
     <div style={{width:'100vw',height:'100vh',position:'relative',overflow:'hidden',background:theme.bg}}>
       <Canvas camera={{position:[10,8,10],fov:50}} style={{touchAction:'none',background:theme.bg}}>
-        <Scene bricks={bricks} onMove={hm} onSelect={setSel} onCommitDrag={onDragEnd} theme={theme} plateColor={plateColor} />
+        <Scene bricks={bricks} onMove={hm} onSelect={setSel} onCommitDrag={onDragEnd} sel={sel} theme={theme} plateColor={plateColor} />
       </Canvas>
 
-      {/* верхняя панель */}
       <div style={{position:'absolute',top:6,left:6,right:6,display:'flex',gap:4,zIndex:10,flexWrap:'wrap',alignItems:'center'}}>
-        <button onClick={undo} style={{...bBtn,fontSize:14}} disabled={historyIdx.current<=0}>↶</button>
-        <button onClick={redo} style={{...bBtn,fontSize:14}} disabled={historyIdx.current>=historyRef.current.length-1}>↷</button>
+        <button onClick={undo} style={{...bBtn,fontSize:14}} disabled={!canUndo}>↶</button>
+        <button onClick={redo} style={{...bBtn,fontSize:14}} disabled={!canRedo}>↷</button>
         <div style={{width:1,height:24,background:theme.border}} />
         <button onClick={()=>setLoadList(p=>!p)} style={{...bBtn,fontSize:11}}>📂</button>
-        <button onClick={()=>{commit(bricks.map(x=>({...x})));setBricks([]);setSel(null);}} style={{...bBtn,fontSize:11}}>🗑</button>
-        <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Save..." maxLength={30} style={{...bBtn,width:90,fontSize:11,outline:'none',textAlign:'left'}} onKeyDown={e=>e.key==='Enter'&&(()=>{if(!saveName.trim())return;const e2={name:saveName.trim(),bricks:bricks.map(b=>({...b}))};setSaves(p=>[...p.filter(s=>s.name!==e2.name),e2]);setSaveName('');})()}/>
-        <button onClick={()=>{if(!saveName.trim())return;const e2={name:saveName.trim(),bricks:bricks.map(b=>({...b}))};setSaves(p=>[...p.filter(s=>s.name!==e2.name),e2]);setSaveName('');}} style={{...bBtn,fontSize:12,background:saveName.trim()?grd:theme.btnBg}}>💾</button>
+        <button onClick={hClear} style={{...bBtn,fontSize:11}}>🗑</button>
+        <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Save..." maxLength={30} style={{...bBtn,width:90,fontSize:11,outline:'none',textAlign:'left'}}
+          onKeyDown={e=>{if(e.key!=='Enter')return;if(!saveName.trim())return;const s={name:saveName.trim(),bricks:bricks.map(b=>({...b}))};setSaves(p=>[...p.filter(x=>x.name!==s.name),s]);setSaveName('');}} />
+        <button onClick={()=>{if(!saveName.trim())return;const s={name:saveName.trim(),bricks:bricks.map(b=>({...b}))};setSaves(p=>[...p.filter(x=>x.name!==s.name),s]);setSaveName('');}} style={{...bBtn,fontSize:12,background:saveName.trim()?grd:theme.btnBg}}>💾</button>
         <div style={{flex:1}} />
         <button onClick={()=>setDark(p=>!p)} style={{...bBtn,fontSize:15,width:36}}>{dark?'☀':'☾'}</button>
       </div>
@@ -212,16 +269,17 @@ export default function App(){
         </div>
       )}
 
-      {/* нижняя панель */}
       <div style={{position:'absolute',bottom:10,left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:6,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'6px 10px',border:`1px solid ${theme.border}`,alignItems:'center'}}>
         <button onClick={hDn} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▼</button>
         <button onClick={hUp} style={{...bBtn,width:40,height:40,fontSize:18,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>▲</button>
+        <div style={{width:1,height:26,background:theme.border}} />
+        <button onClick={hDel} style={{...bBtn,width:40,height:40,fontSize:16,background:sel?grd:theme.btnBg,color:'#fff'}} disabled={!sel}>✕</button>
         <div style={{width:1,height:26,background:theme.border}} />
         <button onClick={()=>setShowMenu(p=>!p)} style={{...bBtn,background:grd,color:'#fff',fontSize:20,width:48,height:48,borderRadius:14}}>+</button>
       </div>
 
       <div style={{position:'absolute',bottom:72,left:'50%',transform:'translateX(-50%)',color:theme.muted,fontSize:9,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.5}}>
-        Tap brick • R/Q/E/Del • Ctrl+Z/Y
+        Drag to move • R rotate • Q/E height • Del • Ctrl+Z/Y
       </div>
 
       {showMenu&&(
