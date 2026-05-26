@@ -34,7 +34,7 @@ function Brick({d,onDown,onUp}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,i
   );
 }
 
-function Scene({bricks,onMove,onSelect,dark}:{bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;dark:boolean}){
+function Scene({bricks,onMove,onSelect,theme}:{bricks:BrickData[];onMove:(id:number,x:number,z:number)=>void;onSelect:(id:number)=>void;theme:any}){
   const ctrl=useRef<any>(null);
   const dr=useRef<{id:number;y:number}|null>(null);
   const pl=new THREE.Plane(new THREE.Vector3(0,1,0));
@@ -52,13 +52,12 @@ function Scene({bricks,onMove,onSelect,dark}:{bricks:BrickData[];onMove:(id:numb
   const hd=useCallback((e:ThreeEvent<PointerEvent>,id:number)=>{e.stopPropagation();const b=mp.current.get(id);if(!b)return;dr.current={id,y:b.y};onSelect(id);if(ctrl.current)ctrl.current.enabled=false;},[onSelect]);
   const hu=useCallback(()=>{dr.current=null;if(ctrl.current)ctrl.current.enabled=true;},[]);
 
-  const gc=dark?'#6e6e8a':'#c0c0d0', sc=dark?'#9a9ab8':'#e0e0f0';
   return(<>
     <OrbitControls ref={ctrl} makeDefault enableDamping={false} />
-    <ambientLight intensity={0.5} />
-    <directionalLight position={[5,10,5]} intensity={1} />
-    <directionalLight position={[-5,5,-5]} intensity={0.3} />
-    <Grid args={[20,20]} cellSize={1} cellThickness={0.5} cellColor={gc} sectionSize={5} sectionThickness={1} sectionColor={sc} fadeDistance={30} position={[0,-0.01,0]} />
+    <ambientLight intensity={0.4} color={theme.ambient} />
+    <directionalLight position={[5,10,5]} intensity={0.8} color={theme.light1} />
+    <directionalLight position={[-5,5,-5]} intensity={0.3} color={theme.light2} />
+    <Grid args={[20,20]} cellSize={1} cellThickness={0.5} cellColor={theme.grid} sectionSize={5} sectionThickness={1} sectionColor={theme.gridSec} fadeDistance={30} position={[0,-0.01,0]} />
     {bricks.map(b=><Brick key={b.id} d={b} onDown={hd} onUp={hu} />)}
   </>);
 }
@@ -93,19 +92,26 @@ export default function App(){
   const hUp=useCallback(()=>{if(sel===null)return;setBricks(p=>p.map(b=>b.id===sel?{...b,y:b.y+0.5}:b));},[sel]);
   const hDn=useCallback(()=>{if(sel===null)return;setBricks(p=>p.map(b=>b.id===sel?{...b,y:Math.max(0.5,b.y-0.5)}:b));},[sel]);
 
-  const bg=dark?'#0b0b14':'#f0f0f5';
-  const uiBg=`rgba(${dark?'10,10,20':'240,240,248'},0.93)`;
-  const txt=dark?'#fff':'#111';
-  const muted=dark?'#9a9ab8':'#666';
-  const border=`1px solid rgba(${dark?'255,255,255':'0,0,0'},0.1)`;
-  const grad='linear-gradient(135deg,#7c3aed,#a855f7)';
+  const theme=dark?{
+    bg:'#0c0a1a', uiBg:'rgba(16,12,30,0.94)', txt:'#e4ddf5', muted:'#8a7ea8',
+    border:'rgba(168,85,247,0.15)', grid:'#3a2e5a', gridSec:'#5a4a7a',
+    ambient:'#332266', light1:'#8855cc', light2:'#443377', accent:'#7c3aed',
+    accent2:'#a855f7', btnBg:'rgba(255,255,255,0.10)', btnTxt:'#e4ddf5',
+  }:{
+    bg:'#f3eefb', uiBg:'rgba(248,244,255,0.94)', txt:'#1a1430', muted:'#7a6e98',
+    border:'rgba(124,58,237,0.12)', grid:'#c8b8e0', gridSec:'#dcccf0',
+    ambient:'#eeddff', light1:'#b080ff', light2:'#d4b0ff', accent:'#6d28d9',
+    accent2:'#9333ea', btnBg:'rgba(109,40,217,0.08)', btnTxt:'#1a1430',
+  };
 
-  const bBtn:any={padding:'10px 12px',fontSize:14,fontWeight:600,border:'none',borderRadius:10,cursor:'pointer',color:'#fff',background:'rgba(255,255,255,0.12)',minWidth:40,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'manipulation'};
+  const grd=`linear-gradient(135deg,${theme.accent},${theme.accent2})`;
+
+  const bBtn:any={padding:'10px 12px',fontSize:14,fontWeight:600,border:'none',borderRadius:10,cursor:'pointer',color:theme.btnTxt,background:theme.btnBg,minWidth:40,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'manipulation'};
 
   return(
-    <div style={{width:'100vw',height:'100vh',position:'relative',overflow:'hidden',background:bg}}>
-      <Canvas camera={{position:[10,8,10],fov:50}} style={{touchAction:'none',background:bg}}>
-        <Scene bricks={bricks} onMove={hm} onSelect={setSel} dark={dark} />
+    <div style={{width:'100vw',height:'100vh',position:'relative',overflow:'hidden',background:theme.bg}}>
+      <Canvas camera={{position:[10,8,10],fov:50}} style={{touchAction:'none',background:theme.bg}}>
+        <Scene bricks={bricks} onMove={hm} onSelect={setSel} theme={theme} />
       </Canvas>
 
       {/* верхняя панель */}
@@ -113,17 +119,17 @@ export default function App(){
         <div style={{display:'flex',gap:4,flex:1,flexWrap:'wrap'}}>
           <button onClick={()=>setLoadList(p=>!p)} style={{...bBtn,fontSize:12}}>📂 Load</button>
           <button onClick={()=>{setBricks([]);setSel(null);}} style={{...bBtn,fontSize:12}}>🗑 New</button>
-          <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Save..." maxLength={30} style={{...bBtn,background:`rgba(${dark?'255,255,255':'0,0,0'},0.06)`,width:100,fontSize:12,outline:'none',textAlign:'left'}} onKeyDown={e=>e.key==='Enter'&&(()=>{if(!saveName.trim())return;setSaves(p=>[...p.filter(s=>s.name!==saveName.trim()),{name:saveName.trim(),bricks:bricks.map(b=>({...b}))}]);setSaveName('');})()}/>
-          <button onClick={()=>{if(!saveName.trim())return;setSaves(p=>[...p.filter(s=>s.name!==saveName.trim()),{name:saveName.trim(),bricks:bricks.map(b=>({...b}))}]);setSaveName('');}} style={{...bBtn,fontSize:12,background:saveName.trim()?grad:'rgba(255,255,255,0.1)'}}>💾</button>
+          <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Save..." maxLength={30} style={{...bBtn,width:100,fontSize:12,outline:'none',textAlign:'left'}} onKeyDown={e=>e.key==='Enter'&&(()=>{if(!saveName.trim())return;setSaves(p=>[...p.filter(s=>s.name!==saveName.trim()),{name:saveName.trim(),bricks:bricks.map(b=>({...b}))}]);setSaveName('');})()}/>
+          <button onClick={()=>{if(!saveName.trim())return;setSaves(p=>[...p.filter(s=>s.name!==saveName.trim()),{name:saveName.trim(),bricks:bricks.map(b=>({...b}))}]);setSaveName('');}} style={{...bBtn,fontSize:12,background:saveName.trim()?grd:theme.btnBg}}>💾</button>
         </div>
         <button onClick={()=>setDark(p=>!p)} style={{...bBtn,fontSize:16,width:40}}>{dark?'☀':'☾'}</button>
       </div>
 
       {/* список сохранений */}
       {loadList&&(
-        <div style={{position:'absolute',top:48,left:8,zIndex:20,background:uiBg,backdropFilter:'blur(8px)',borderRadius:12,padding:12,minWidth:180,border,color:txt,maxHeight:'50vh',overflowY:'auto'}}>
-          <div style={{color:muted,fontSize:11,marginBottom:8,fontFamily:'monospace'}}>Saves</div>
-          {saves.length===0&&<div style={{color:'#666',fontSize:11}}>Empty</div>}
+        <div style={{position:'absolute',top:48,left:8,zIndex:20,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:12,padding:12,minWidth:180,border:`1px solid ${theme.border}`,color:theme.txt,maxHeight:'50vh',overflowY:'auto'}}>
+          <div style={{color:theme.muted,fontSize:11,marginBottom:8,fontFamily:'monospace'}}>Saves</div>
+          {saves.length===0&&<div style={{color:theme.muted,fontSize:11}}>Empty</div>}
           {saves.map(s=>(
             <div key={s.name} style={{display:'flex',gap:4,marginBottom:4}}>
               <button onClick={()=>{nextId=Math.max(...s.bricks.map(b=>b.id),0)+1;setBricks(s.bricks.map(b=>({...b})));setSel(null);setLoadList(false);}} style={{...bBtn,flex:1,textAlign:'left',fontSize:11,background:'rgba(255,255,255,0.06)',padding:'6px 10px'}}>{s.name} ({s.bricks.length})</button>
@@ -134,24 +140,23 @@ export default function App(){
       )}
 
       {/* нижняя панель */}
-      <div style={{position:'absolute',bottom:12,left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:8,background:uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'8px 12px',border,alignItems:'center'}}>
-        <button onClick={hDn} style={{...bBtn,width:44,height:44,fontSize:20,background:sel?grad:'rgba(255,255,255,0.06)'}} disabled={!sel}>▼</button>
-        <button onClick={hUp} style={{...bBtn,width:44,height:44,fontSize:20,background:sel?grad:'rgba(255,255,255,0.06)'}} disabled={!sel}>▲</button>
-        <div style={{width:1,height:28,background:border}} />
-        <button onClick={()=>setShowMenu(p=>!p)} style={{...bBtn,background:grad,fontSize:22,width:52,height:52,borderRadius:14}}>+</button>
+      <div style={{position:'absolute',bottom:12,left:'50%',transform:'translateX(-50%)',zIndex:10,display:'flex',gap:8,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:'8px 12px',border:`1px solid ${theme.border}`,alignItems:'center'}}>
+        <button onClick={hDn} style={{...bBtn,width:44,height:44,fontSize:20,background:sel?grd:theme.btnBg}} disabled={!sel}>▼</button>
+        <button onClick={hUp} style={{...bBtn,width:44,height:44,fontSize:20,background:sel?grd:theme.btnBg}} disabled={!sel}>▲</button>
+        <div style={{width:1,height:28,background:theme.border}} />
+        <button onClick={()=>setShowMenu(p=>!p)} style={{...bBtn,background:grd,fontSize:22,width:52,height:52,borderRadius:14}}>+</button>
       </div>
 
       {/* хинт */}
-      <div style={{position:'absolute',bottom:76,left:'50%',transform:'translateX(-50%)',color:muted,fontSize:10,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.6}}>
+      <div style={{position:'absolute',bottom:76,left:'50%',transform:'translateX(-50%)',color:theme.muted,fontSize:10,fontFamily:'monospace',zIndex:10,textAlign:'center',pointerEvents:'none',opacity:0.6}}>
         Tap brick to select • R=rotate • Q/E=up/down • Del=delete
       </div>
 
-      {/* меню добавления */}
       {showMenu&&(
-        <div style={{position:'absolute',bottom:90,left:'50%',transform:'translateX(-50%)',zIndex:20,background:uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:14,border,display:'flex',flexDirection:'column',gap:10,minWidth:240}}>
+        <div style={{position:'absolute',bottom:90,left:'50%',transform:'translateX(-50%)',zIndex:20,background:theme.uiBg,backdropFilter:'blur(8px)',borderRadius:16,padding:14,border:`1px solid ${theme.border}`,display:'flex',flexDirection:'column',gap:10,minWidth:240}}>
           <div style={{display:'flex',gap:4,flexWrap:'wrap',justifyContent:'center'}}>
             {(Object.keys(BRICK_TYPES)as BrickType[]).map(t=>(
-              <button key={t} onClick={()=>setNewType(t)} style={{...bBtn,fontSize:11,padding:'5px 10px',background:newType===t?grad:'rgba(255,255,255,0.08)'}}>{BRICK_TYPES[t].label}</button>
+              <button key={t} onClick={()=>setNewType(t)} style={{...bBtn,fontSize:11,padding:'5px 10px',background:newType===t?grd:theme.btnBg}}>{BRICK_TYPES[t].label}</button>
             ))}
           </div>
           <div style={{display:'flex',gap:4,flexWrap:'wrap',justifyContent:'center'}}>
@@ -159,7 +164,7 @@ export default function App(){
               <div key={c} onClick={()=>setNewColor(c)} style={{width:26,height:26,borderRadius:6,background:c,cursor:'pointer',border:newColor===c?'2px solid #a855f7':'2px solid transparent',transition:'border 0.15s'}} />
             ))}
           </div>
-          <button onClick={ha} style={{...bBtn,background:grad,fontSize:16,padding:'12px 20px'}}>Add Brick</button>
+          <button onClick={ha} style={{...bBtn,background:grd,fontSize:16,padding:'12px 20px'}}>Add Brick</button>
         </div>
       )}
     </div>
