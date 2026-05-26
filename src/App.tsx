@@ -242,7 +242,7 @@ export default function App(){
         <Scene bricks={bricks} onMove={hm} onSelect={setSel} onCommitDrag={onDragEnd} sel={sel} theme={theme} plateColor={plateColor} />
       </Canvas>
 
-      <div style={{position:'absolute',top:'calc(6px + env(safe-area-inset-top, 0px))',left:6,right:6,display:'flex',gap:4,zIndex:10,flexWrap:'wrap',alignItems:'center'}}>
+      <div style={{position:'absolute',top:'calc(20px + env(safe-area-inset-top, 0px))',left:6,right:6,display:'flex',gap:4,zIndex:10,flexWrap:'wrap',alignItems:'center'}}>
         <button onClick={undo} style={{...bBtn,fontSize:14}} disabled={!canUndo}>↶</button>
         <button onClick={redo} style={{...bBtn,fontSize:14}} disabled={!canRedo}>↷</button>
         <div style={{width:1,height:24,background:theme.border}} />
