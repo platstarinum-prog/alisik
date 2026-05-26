@@ -1,16 +1,15 @@
 {
   "name": "alisik",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
-  "engines": { "node": ">=18" },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-three/drei": "^9.121.4",
+    "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^9.6.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
