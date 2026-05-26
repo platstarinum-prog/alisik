@@ -32,21 +32,19 @@ function Brick({d,onDown,sel}:{d:BrickData;onDown:(e:ThreeEvent<PointerEvent>,id
     <group position={[d.x,d.y,d.z]} rotation={[0,d.rot,0]} onPointerDown={e=>onDown(e,d.id)}>
       <mesh>
         <boxGeometry args={[w,1,depth]} />
-        <meshStandardMaterial color={d.color} roughness={0.25} metalness={0.15}
-          emissive={sel?'#a855f7':'#000000'} emissiveIntensity={sel?0.35:0} />
+        <meshStandardMaterial color={d.color} roughness={0.25} metalness={0.15} />
       </mesh>
       {studs(d.type).map((p,i)=>(
         <mesh key={i} position={p}>
           <cylinderGeometry args={[0.25,0.25,0.2,8]} />
-          <meshStandardMaterial color={d.color} roughness={0.2} metalness={0.15}
-            emissive={sel?'#a855f7':'#000000'} emissiveIntensity={sel?0.25:0} />
+          <meshStandardMaterial color={d.color} roughness={0.2} metalness={0.15} />
         </mesh>
       ))}
       {sel&&(
-        <mesh position={[0,0.5,0]}>
-          <boxGeometry args={[w+0.06,1.06,depth+0.06]} />
-          <meshBasicMaterial color="#a855f7" transparent opacity={0.15} depthWrite={false} />
-        </mesh>
+        <lineSegments>
+          <edgesGeometry args={[new THREE.BoxGeometry(w,1,depth)]} />
+          <lineBasicMaterial color="#a855f7" />
+        </lineSegments>
       )}
     </group>
   );
